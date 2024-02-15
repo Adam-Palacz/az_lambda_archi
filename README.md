@@ -1,1 +1,1 @@
-# az_pyspark
+# Lambda architecture in Azure
