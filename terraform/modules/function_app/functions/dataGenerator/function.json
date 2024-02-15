@@ -1,0 +1,17 @@
+{
+    "bindings": [
+      {
+        "name": "myTimer",
+        "type": "timerTrigger",
+        "direction": "in",
+        "schedule": "* * * * * *"
+      },
+      {
+        "name": "outputEventHubMessage",
+        "connection": "ehns-apdvc-dev-westeurope_eh-auth-apdvc-dev-westeurope_EVENTHUB",
+        "eventHubName": "outeventhub",
+        "direction": "out",
+        "type": "eventHub"
+      }
+    ]
+  }
