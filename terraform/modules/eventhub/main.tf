@@ -55,7 +55,6 @@ resource "azurerm_eventhub" "eh" {
       storage_account_id  = data.azurerm_storage_account.sa.id
     }
   }
-
 }
 
 resource "azurerm_eventhub_consumer_group" "eh_cg_stream" {
@@ -63,7 +62,6 @@ resource "azurerm_eventhub_consumer_group" "eh_cg_stream" {
   namespace_name      = azurerm_eventhub_namespace.eh_ns.name
   eventhub_name       = azurerm_eventhub.eh.name
   resource_group_name = data.azurerm_resource_group.rg.name
-
 }
 
 resource "azurerm_eventhub_consumer_group" "eh_cg_tw" {

@@ -12,17 +12,6 @@ module "rg" {
   location    = var.location
 }
 
-# module "databricks" {
-#   source = "./modules/databricks"
-
-#   rg_name = module.rg.rg_name
-#   postfix = local.postfix
-
-#   depends_on = [
-#     module.rg
-#   ]
-# }
-
 module "sa" {
   source = "./modules/storage_account"
 
@@ -34,6 +23,30 @@ module "sa" {
     module.rg
   ]
 }
+
+module "key_vault" {
+  source = "./modules/key_vault"
+
+  postfix = local.postfix
+  rg_name = module.rg.rg_name
+  sa_name = module.sa.sa_name
+
+  depends_on = [
+    module.sa
+  ]
+}
+
+# module "databricks" {
+#   source = "./modules/databricks"
+
+#   rg_name = module.rg.rg_name
+#   postfix = local.postfix
+
+#   depends_on = [
+#     module.rg,
+#     module.key_vault
+#   ]
+# }
 
 module "eventhub" {
   source = "./modules/eventhub"
@@ -51,6 +64,17 @@ module "eventhub" {
   ]
 }
 
+module "app_ins" {
+  source = "./modules/app_insights"
+
+  rg_name = module.rg.rg_name
+  postfix = local.postfix
+
+  depends_on = [
+    module.rg
+  ]
+}
+
 module "az_fa" {
   source = "./modules/function_app"
 
@@ -58,48 +82,50 @@ module "az_fa" {
   sa_name         = module.sa.sa_name
   eh_ns_name      = module.eventhub.eh_ns_name
   eh_ns_auth_name = module.eventhub.eh_ns_auth_name
+  eh_name         = module.eventhub.eh_name
+  app_ins_name    = module.app_ins.app_ins_name
   postfix         = local.postfix
 
   depends_on = [
-    module.eventhub
+    module.eventhub,
+    module.app_ins
   ]
 }
 
-resource "null_resource" "package_and_upload" {
-  triggers = {
-    always_run = "${timestamp()}"
-  }
-  provisioner "local-exec" {
-    command = <<EOT
-    powershell Compress-Archive -Path .\\modules\\function_app\\functions\\dataGenerator -DestinationPath .\\modules\\function_app\\functions\\dataGenerator\\dataGenerator.zip -Force
-    EOT
-  }
-  provisioner "local-exec" {
-    command = <<EOT
-    az functionapp deployment source config-zip --resource-group ${module.rg.rg_name} --name ${module.az_fa.az_fa_name} --src .\\modules\\function_app\\functions\\dataGenerator\\dataGenerator.zip
-    EOT
-  }
+module "cosmosdb" {
+  source = "./modules/cosmosdb"
+
+  rg_name = module.rg.rg_name
+
   depends_on = [
-    module.az_fa,
+    module.rg
   ]
 }
 
-### For bash ###
+module "stream" {
+  source = "./modules/stream_analytics_job"
 
-# resource "null_resource" "package_and_upload" {
-#   triggers = {
-#     always_run = "${timestamp()}"
-#   }
-#   provisioner "local-exec" {
-#     command = <<EOT
-#     zip -r -DestinationPath ./modules/function_app/functions/dataGenerator/dataGenerator.zip ./modules/function_app/functions/dataGenerator 
-#     EOT
-#   }
-#   provisioner "local-exec" {
-#     command = <<EOT
-#     az functionapp deployment source config-zip --resource-group ${module.rg.rg_name} --name ${module.az_fa.az_fa_name} --src .\\modules\\function_app\\functions\\dataGenerator\\dataGenerator.zip
-#     EOT
-#   }
+  rg_name           = module.rg.rg_name
+  eh_ns_name        = module.eventhub.eh_ns_name
+  eh_ns_auth_name   = module.eventhub.eh_ns_auth_name
+  eh_name           = module.eventhub.eh_name
+  eh_cg_stream_name = module.eventhub.eh_cg_stream_name
+  db_acc_name       = module.cosmosdb.db_acc_name
+  db_nosql_name     = module.cosmosdb.db_nosql_name
+
+  depends_on = [
+    module.rg,
+    module.eventhub,
+    module.cosmosdb
+  ]
+
+}
+# module "dashboard" {
+#   source = "./modules/dashboard"
+
+#   rg_name = module.rg.rg_name
+
 #   depends_on = [
-#     module.az_fa,
+#     module.rg
 #   ]
+# }

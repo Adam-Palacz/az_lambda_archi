@@ -1,0 +1,3 @@
+project     = "apdvc"
+environment = "dev"
+location    = "westeurope"
