@@ -64,8 +64,8 @@ resource "azurerm_stream_analytics_job" "stream_job" {
       data.ProductionRate/data.PowerUsage as ProductionPowerEfficiency
     INTO CosmosOutput
     FROM EventHubInput
+    WHERE messageType = 'metrics'
 QUERY
-
 }
 
 resource "azurerm_stream_analytics_stream_input_eventhub" "stream_input_eh" {
@@ -99,4 +99,15 @@ resource "azurerm_stream_analytics_output_cosmosdb" "stream_out_db" {
   cosmosdb_account_key     = data.azurerm_cosmosdb_account.db_acc.primary_key
   cosmosdb_sql_database_id = data.azurerm_cosmosdb_sql_database.db_nosql.id
   container_name           = azurerm_cosmosdb_sql_container.db_container.name
+}
+
+resource "null_resource" "package_and_upload" {
+  triggers = {
+    always_run = "${timestamp()}"
+  }
+  provisioner "local-exec" {
+    command = <<EOT
+    az stream-analytics job start --job-name "${azurerm_stream_analytics_job.stream_job.name}" --resource-group "${data.azurerm_resource_group.rg.name}" 
+    EOT
+  }
 }
