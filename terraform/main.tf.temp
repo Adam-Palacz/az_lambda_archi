@@ -1,0 +1,109 @@
+# Starting with local variables that will be utilized throughout the script
+locals {
+  # postfix is used for naming resources uniquely. Using combination of project, environment and location here.
+  postfix          = "${var.project}-${var.environment}-${var.location}"
+  # postfix_combined is another form where project, environment and location are just concatenated without hyphens.
+  postfix_combined = "${var.project}${var.environment}${var.location}"
+}
+
+# Using resource group module for creating Azure resource group
+module "rg" {
+  source = "./modules/rg"
+  postfix     = local.postfix
+  project     = var.project
+  environment = var.environment
+  location    = var.location
+}
+
+# Utilizing Storage Account module for creating Azure storage account.
+module "sa" {
+  source = "./modules/storage_account"
+  rg_name = module.rg.rg_name # Using Resource Group name from the "rg" module
+  sa_name = "saapdevwesteurope"
+  sc_name = "rawdata"
+  # Adding explicit dependency on Resource Group for sequential resource creation.
+  depends_on = [module.rg]
+}
+
+# Key Vault module to create Azure key vault for secure secrets storage.
+module "key_vault" {
+  source = "./modules/key_vault"
+  postfix = local.postfix
+  rg_name = module.rg.rg_name # Using Resource Group name from the "rg" module
+  sa_name = module.sa.sa_name # Using Storage Account name from the "sa" module
+  # Making sure Storage Account is created before Key Vault
+  depends_on = [module.sa]
+}
+
+# Event Hub module for creating an Azure Event Hub for event-driven architecture.
+module "eventhub" {
+  source = "./modules/eventhub"
+  rg_name           = module.rg.rg_name # Resource Group name from "rg" module
+  sa_name           = module.sa.sa_name # Storage Account name from "sa" module
+  sc_name           = module.sa.sc_name # Storage Account's sc_name from "sa" module
+  postfix           = local.postfix
+  eh_name           = "rawdata"
+  eh_cg_stream_name = "stream"
+  eh_cg_tw_name     = "tw"
+  # Making sure Storage Account is created before Event Hub
+  depends_on = [module.sa]
+}
+
+# Application Insights module for creating Azure App Insights for application telemetry.
+module "app_ins" {
+  source = "./modules/app_insights"
+  rg_name = module.rg.rg_name # Resource Group name from "rg" module
+  postfix = local.postfix
+  # Making sure Resource Group is created before Application Insights
+  depends_on = [module.rg]
+}
+
+# Function App module for creating a serverless Azure Function App
+module "az_fa" {
+  source = "./modules/function_app"
+  rg_name         = module.rg.rg_name # Resource Group name from "rg" module
+  sa_name         = module.sa.sa_name # Storage Account name from "sa" module
+  eh_ns_name      = module.eventhub.eh_ns_name # Event Hub name from "eventhub" module
+  eh_ns_auth_name = module.eventhub.eh_ns_auth_name # Event Hub auth name from "eventhub" module
+  eh_name         = module.eventhub.eh_name # Event Hub name from "eventhub" module
+  app_ins_name    = module.app_ins.app_ins_name # App Insights name from "app_ins" module
+  postfix         = local.postfix
+  # Ensuring Event Hub and Application Insights are created before Function App
+  depends_on = [module.eventhub, module.app_ins]
+}
+
+# Cosmos DB module for creating a serverless Azure Cosmos DB 
+module "cosmosdb" {
+  source = "./modules/cosmosdb"
+  rg_name = module.rg.rg_name # Resource Group name from "rg" module
+  # Ensuring Resource Group is created before Cosmos DB
+  depends_on = [module.rg]
+}
+
+# Stream Analytics Job module for creating a Azure Stream Analytics Job for real-time data streaming analytics.
+module "stream" {
+  source = "./modules/stream_analytics_job"
+  rg_name           = module.rg.rg_name # Resource Group name from "rg" module
+  eh_ns_name        = module.eventhub.eh_ns_name # Event Hub name from "eventhub" module
+  eh_ns_auth_name   = module.eventhub.eh_ns_auth_name # Event Hub auth name from "eventhub" module
+  eh_name           = module.eventhub.eh_name # Event Hub name from "eventhub" module
+  eh_cg_stream_name = module.eventhub.eh_cg_stream_name # Event Hub stream name from "eventhub" module
+  db_acc_name       = module.cosmosdb.db_acc_name # Cosmos DB name from "cosmosdb" module
+  db_nosql_name     = module.cosmosdb.db_nosql_name # Cosmos DB NoSQL name from "cosmosdb" module
+  # Ensuring Resource Group, Event Hub and Cosmos DB are created before Stream Analytics Job
+  depends_on = [module.rg, module.eventhub, module.cosmosdb]
+}
+
+# Below two modules are currently not used but could be in future. Uncomment to enable them.
+# module "databricks" {
+#   source = "./modules/databricks"
+#   rg_name = module.rg.rg_name # Resource Group name from "rg" module
+#   postfix = local.postfix
+#   depends_on = [module.rg, module.key_vault] # Making sure RG and Key Vault are created before Databricks
+# }
+
+# module "dashboard" {
+#   source = "./modules/dashboard"
+#   rg_name = module.rg.rg_name # Resource Group name from "rg" module
+#   depends_on = [module.rg] # Ensuring Resource Group is created before Dashboard
+# }

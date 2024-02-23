@@ -132,12 +132,12 @@ resource "null_resource" "package_and_upload" {
   }
   provisioner "local-exec" {
     command = <<EOT
-    powershell Compress-Archive -Path .\\modules\\function_app\\functions\\dataGenerator\\* -DestinationPath .\\modules\\function_app\\functions\\dataGenerator\\dataGenerator.zip -Force
+    powershell Compress-Archive -Path .\\functions\\dataGenerator\\* -DestinationPath .\\functions\\dataGenerator\\dataGenerator.zip -Force
     EOT
   }
   provisioner "local-exec" {
     command = <<EOT
-    az functionapp deployment source config-zip --resource-group ${data.azurerm_resource_group.rg.name} --name ${azurerm_linux_function_app.az_fa.name} --src .\\modules\\function_app\\functions\\dataGenerator\\dataGenerator.zip
+    az functionapp deployment source config-zip --resource-group ${data.azurerm_resource_group.rg.name} --name ${azurerm_linux_function_app.az_fa.name} --src .\\functions\\dataGenerator\\dataGenerator.zip
     EOT
   }
 }

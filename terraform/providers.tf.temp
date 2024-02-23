@@ -1,0 +1,18 @@
+# Initialize Terraform and set required providers
+# Using Azurerm provider which allows Terraform to create resources in Azure
+terraform {
+  # Declare the provider along with its source and version
+  required_providers {
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = "3.91.0"
+    }
+  }
+}
+
+# Configure access to Azure provider
+provider "azurerm" {
+  # The features block is required by azurerm provider, the block itself is empty 
+  # This allows to take advantage of certain Azure features
+  features {}
+}

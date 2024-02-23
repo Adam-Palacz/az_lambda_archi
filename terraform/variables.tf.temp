@@ -1,0 +1,43 @@
+TERRAFORM FILE: 
+
+# Define a variable "project" of type string with default value "ap"
+variable "project" {
+  type    = string
+  default = "ap"
+}
+
+# Define a variable "environment" of type string with validation on its values, default is "dev"
+variable "environment" {
+  type = string
+  validation {
+    # Variable value must be among ["dev", "test", "stg", "prod"]
+    condition = contains(
+      ["dev", "test", "stg", "prod"],
+      var.environment
+    )
+    # Custom error message to display if validation fails
+    error_message = "Environment is not: dev, test or prod."
+  }
+  default = "dev"
+}
+
+# Define a variable "location" of type string with validation on its values, default is "westeurope"
+variable "location" {
+  type = string
+  validation {
+    # Variable value must be among ["westeurope", "northeurope", "West Europe", "North Europe"]
+    condition = contains(
+      ["westeurope", "northeurope", "West Europe", "North Europe"],
+      var.location
+    )
+    # Custom error message to display if validation fails
+    error_message = "Location is not: westeurope or northeurope."
+  }
+  default = "westeurope"
+}
+
+# Define a variable "postfix" of type string with default value "ap-dev-westeurope"
+variable "postfix" {
+  type    = string
+  default = "ap-dev-westeurope"
+}
