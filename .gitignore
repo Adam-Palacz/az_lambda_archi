@@ -1,2 +1,5 @@
 /terraform/terraform.*
 /terraform/.terraform*
+/openai_api/.env
+/terraform.tfstate*
+/venv
